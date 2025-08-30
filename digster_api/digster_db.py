@@ -14,10 +14,12 @@ try:
         Follow,
         Genre,
         Listen,
+        StreamingServiceMapping,
         Style,
         Track,
         User,
         UserAlbum,
+        UserStreamingService,
     )
 except:
     from digster_api.models import (
@@ -28,10 +30,12 @@ except:
         Follow,
         Genre,
         Listen,
+        StreamingServiceMapping,
         Style,
         Track,
         User,
         UserAlbum,
+        UserStreamingService,
     )
 
 
@@ -304,3 +308,188 @@ class DigsterDB:
 
     def close_conn(self):
         self.db.dispose()
+
+    # Platform-agnostic streaming service methods
+    def get_user_streaming_tokens(self, user_id: str, service_name: str):
+        """Get user tokens for a specific streaming service."""
+        user_service = (
+            self.session.query(UserStreamingService)
+            .filter(UserStreamingService.user_id == user_id)
+            .filter(UserStreamingService.service_name == service_name)
+            .first()
+        )
+        if user_service:
+            return {
+                "access_token": user_service.access_token,
+                "refresh_token": user_service.refresh_token
+            }
+        # Fallback to legacy Spotify tokens for backward compatibility
+        if service_name == "spotify":
+            return self.get_user_spotify_tokens(user_id)
+        return None
+
+    def upsert_user_streaming_service(self, user_id: str, service_name: str, access_token: str, refresh_token: str):
+        """Insert or update user streaming service tokens."""
+        user_service = (
+            self.session.query(UserStreamingService)
+            .filter(UserStreamingService.user_id == user_id)
+            .filter(UserStreamingService.service_name == service_name)
+            .first()
+        )
+        
+        if user_service:
+            user_service.access_token = access_token
+            user_service.refresh_token = refresh_token
+            user_service.updated_at = datetime.now()
+        else:
+            new_user_service = UserStreamingService(
+                user_id=user_id,
+                service_name=service_name,
+                access_token=access_token,
+                refresh_token=refresh_token,
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+            self.session.add(new_user_service)
+        
+        self.session.commit()
+
+    def add_streaming_service_mapping(self, entity_type: str, entity_id: int, service_name: str, external_id: str):
+        """Add a mapping between internal entity and external service ID."""
+        existing = (
+            self.session.query(StreamingServiceMapping)
+            .filter(StreamingServiceMapping.entity_type == entity_type)
+            .filter(StreamingServiceMapping.entity_id == entity_id)
+            .filter(StreamingServiceMapping.service_name == service_name)
+            .first()
+        )
+        
+        if not existing:
+            mapping = StreamingServiceMapping(
+                entity_type=entity_type,
+                entity_id=entity_id,
+                service_name=service_name,
+                external_id=external_id,
+                created_at=datetime.now()
+            )
+            self.session.add(mapping)
+            self.session.commit()
+
+    def get_external_id(self, entity_type: str, entity_id: int, service_name: str) -> str:
+        """Get external service ID for an internal entity."""
+        mapping = (
+            self.session.query(StreamingServiceMapping)
+            .filter(StreamingServiceMapping.entity_type == entity_type)
+            .filter(StreamingServiceMapping.entity_id == entity_id)
+            .filter(StreamingServiceMapping.service_name == service_name)
+            .first()
+        )
+        return mapping.external_id if mapping else None
+
+    def get_entity_by_external_id(self, entity_type: str, service_name: str, external_id: str) -> int:
+        """Get internal entity ID by external service ID."""
+        mapping = (
+            self.session.query(StreamingServiceMapping)
+            .filter(StreamingServiceMapping.entity_type == entity_type)
+            .filter(StreamingServiceMapping.service_name == service_name)
+            .filter(StreamingServiceMapping.external_id == external_id)
+            .first()
+        )
+        return mapping.entity_id if mapping else None
+
+    def insert_artist_platform_agnostic(self, external_id: str, name: str, service_name: str = 'spotify') -> int:
+        """Insert artist with platform-agnostic approach."""
+        # Check if artist already exists by external service mapping
+        existing_id = self.get_entity_by_external_id('artist', service_name, external_id)
+        if existing_id:
+            return existing_id
+        
+        # Check legacy spotify_id for backward compatibility
+        if service_name == 'spotify':
+            artist = (
+                self.session.query(Artist)
+                .filter(Artist.spotify_id == external_id)
+                .first()
+            )
+            if artist:
+                # Create mapping for existing artist
+                self.add_streaming_service_mapping('artist', artist.id, service_name, external_id)
+                return artist.id
+        
+        # Create new artist
+        db_artist = Artist(
+            external_id=external_id,
+            name=name,
+            created_at=datetime.now(),
+        )
+        # Keep spotify_id for backward compatibility
+        if service_name == 'spotify':
+            db_artist.spotify_id = external_id
+            
+        self.session.add(db_artist)
+        self.session.commit()
+        
+        # Add mapping
+        self.add_streaming_service_mapping('artist', db_artist.id, service_name, external_id)
+        
+        return db_artist.id
+
+    def insert_album_platform_agnostic(
+        self,
+        external_id: str,
+        artist_id: int,
+        type: str,
+        upc_id: str,
+        label: str,
+        name: str,
+        genres: str,
+        image_url: str,
+        popularity: int,
+        release_date: str,
+        total_tracks: int,
+        service_name: str = 'spotify'
+    ) -> int:
+        """Insert album with platform-agnostic approach."""
+        # Check if album already exists by external service mapping
+        existing_id = self.get_entity_by_external_id('album', service_name, external_id)
+        if existing_id:
+            return existing_id
+        
+        # Check legacy spotify_id for backward compatibility
+        if service_name == 'spotify':
+            album = (
+                self.session.query(Album)
+                .filter(Album.spotify_id == external_id)
+                .first()
+            )
+            if album:
+                # Create mapping for existing album
+                self.add_streaming_service_mapping('album', album.id, service_name, external_id)
+                return album.id
+        
+        # Create new album
+        db_album = Album(
+            external_id=external_id,
+            artist_id=artist_id,
+            created_at=datetime.now(),
+            type=type,
+            name=name,
+            upc_id=upc_id,
+            genres=genres,
+            image_url=image_url,
+            label=label,
+            popularity=popularity,
+            release_date=release_date,
+            total_tracks=total_tracks,
+        )
+        # Keep spotify_id for backward compatibility
+        if service_name == 'spotify':
+            db_album.spotify_id = external_id
+            
+        self.session.add(db_album)
+        self.session.commit()
+        
+        # Add mapping
+        self.add_streaming_service_mapping('album', db_album.id, service_name, external_id)
+        
+        return db_album.id

@@ -15,8 +15,8 @@ from digster_api.models import (
     Track,
 )
 
-from digster_api.spotify_controller import SpotifyController
 from digster_api.streaming_service_interface import StreamingServiceInterface
+from digster_api.streaming_service_factory import get_streaming_service
 from digster_api.bg_tasks import fetch_albums_data
 from digster_api.mailjet_client import MailJetClient
 from fastapi.responses import RedirectResponse
@@ -25,14 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import requests
 
 
-def get_streaming_service() -> StreamingServiceInterface:
-    """Factory function to get the streaming service instance."""
-    # For now, return SpotifyController, but this can be extended
-    # to support other streaming services based on configuration
-    return SpotifyController(
-        client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
-        client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
-    )
+# Remove the get_streaming_service function since it's now in streaming_service_factory
 
 
 origins = [
