@@ -1,14 +1,13 @@
 import logging
-from digster_api.spotify_controller import SpotifyController
-from digster_api.apple_music_controller import AppleMusicController
-from digster_api.streaming_service_interface import StreamingServiceInterface
-from digster_api.digster_db import DigsterDB
-from digster_api.worker import (
+import os
+from dotenv import load_dotenv
+
+from ..services.streaming import SpotifyController, AppleMusicController, StreamingServiceInterface
+from ..database.connection import DigsterDB
+from ..workers.celery_app import (
     fetch_albums_genres_worker,
     fetch_albums_color_worker,
 )
-import os
-from dotenv import load_dotenv
 
 load_dotenv()
 

@@ -1,6 +1,6 @@
 """User-related models."""
 
-from sqlalchemy import Column, String, Boolean, DateTime
+from sqlalchemy import Column, String, Boolean, DateTime, Integer
 
 from .base import Base
 
@@ -21,7 +21,7 @@ class User(Base):
 
 class Follow(Base):
     __tablename__ = "follows"
-    id = Column(String, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     follower_id = Column(String, index=True)
     following_id = Column(String, index=True)
     created_at = Column(DateTime)
