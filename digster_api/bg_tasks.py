@@ -1,5 +1,6 @@
 import logging
 from digster_api.spotify_controller import SpotifyController
+from digster_api.streaming_service_interface import StreamingServiceInterface
 from digster_api.digster_db import DigsterDB
 from digster_api.worker import (
     fetch_albums_genres_worker,
@@ -11,19 +12,24 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def fetch_albums_data(user_id: str):
-    logging.info("INSERTING USER ALBUMS")
-    spotify_client = SpotifyController(
+def get_streaming_service() -> StreamingServiceInterface:
+    """Factory function to get the streaming service instance."""
+    return SpotifyController(
         client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
         client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
     )
+
+
+def fetch_albums_data(user_id: str):
+    logging.info("INSERTING USER ALBUMS")
+    streaming_client = get_streaming_service()
     with DigsterDB(db_url=str(os.environ.get("DATABASE_URL"))) as db:
         user_id = str(user_id)
         user_tokens = db.get_user_spotify_tokens(user_id)
         limit = 50
         offset = 0
         while True:
-            results = spotify_client.get_user_saved_albums_limit(
+            results = streaming_client.get_user_saved_albums_limit(
                 tokens=user_tokens, limit=limit, offset=offset
             )
             print(
