@@ -8,6 +8,17 @@ from pydantic import BaseModel, HttpUrl
 Base = declarative_base()
 
 
+class StreamingServiceMapping(Base):
+    """Maps internal entities to external streaming service IDs."""
+    __tablename__ = "streaming_service_mappings"
+    id = Column(Integer, primary_key=True, index=True)
+    entity_type = Column(String, index=True)  # 'album', 'track', 'artist'
+    entity_id = Column(Integer, index=True)   # Internal ID (album.id, track.id, artist.id)
+    service_name = Column(String, index=True) # 'spotify', 'deezer', etc.
+    external_id = Column(String, index=True)  # External service ID
+    created_at = Column(DateTime)
+
+
 class AlbumRecRequest(BaseModel):
     recipient_email: str
     recipient_name: str
@@ -30,8 +41,21 @@ class User(Base):
     image_url = Column(String)
     created_at = Column(DateTime)
     has_allowed_fetching = Column(Boolean, default=False)
+    # Keep for backward compatibility during migration
     spotify_access_token = Column(String)
     spotify_refresh_token = Column(String)
+
+
+class UserStreamingService(Base):
+    """Links users to their streaming service accounts and tokens."""
+    __tablename__ = "user_streaming_services"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, index=True)
+    service_name = Column(String, index=True)  # 'spotify', 'deezer', etc.
+    access_token = Column(String)
+    refresh_token = Column(String)
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
 
 
 class Listen(Base):
@@ -47,7 +71,9 @@ class Listen(Base):
 class Track(Base):
     __tablename__ = "tracks"
     id = Column(Integer, primary_key=True, index=True)
+    # Keep for backward compatibility during migration
     spotify_id = Column(String, index=True)
+    external_id = Column(String, index=True)  # Generic external ID for the primary service
     created_at = Column(DateTime)
     name = Column(String)
     duration_ms = Column(Integer)
@@ -69,7 +95,9 @@ class Track(Base):
 class Album(Base):
     __tablename__ = "albums"
     id = Column(Integer, primary_key=True, index=True)
+    # Keep for backward compatibility during migration
     spotify_id = Column(String, index=True)
+    external_id = Column(String, index=True)  # Generic external ID for the primary service
     artist_id = Column(Integer, index=True)
     created_at = Column(DateTime)
     type = Column(String)
@@ -103,7 +131,9 @@ class UserAlbum(Base):
 class Artist(Base):
     __tablename__ = "artists"
     id = Column(Integer, primary_key=True, index=True)
+    # Keep for backward compatibility during migration
     spotify_id = Column(String, index=True)
+    external_id = Column(String, index=True)  # Generic external ID for the primary service
     created_at = Column(DateTime)
     name = Column(String, index=True)
     genres = Column(String)

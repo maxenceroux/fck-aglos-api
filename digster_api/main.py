@@ -15,8 +15,8 @@ from digster_api.models import (
     Track,
 )
 
-from digster_api.spotify_controller import SpotifyController
 from digster_api.streaming_service_interface import StreamingServiceInterface
+from digster_api.streaming_service_factory import get_streaming_service
 from digster_api.bg_tasks import fetch_albums_data
 from digster_api.mailjet_client import MailJetClient
 from fastapi.responses import RedirectResponse
@@ -25,14 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import requests
 
 
-def get_streaming_service() -> StreamingServiceInterface:
-    """Factory function to get the streaming service instance."""
-    # For now, return SpotifyController, but this can be extended
-    # to support other streaming services based on configuration
-    return SpotifyController(
-        client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
-        client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
-    )
+# Remove the get_streaming_service function since it's now in streaming_service_factory
 
 
 origins = [
@@ -165,11 +158,12 @@ def send_album_rec(request: AlbumRecRequest):
 
 
 @app.put("/album")
-def save_album(user_id: str, album_id: str):
+def save_album(user_id: str, album_id: str, service_name: str = "spotify"):
     with DigsterDB(db_url=str(os.environ.get("DATABASE_URL"))) as db:
         user_id = str(user_id)
-        user_tokens = db.get_user_spotify_tokens(user_id)
-    streaming_client = get_streaming_service()
+        # Use platform-agnostic token retrieval
+        user_tokens = db.get_user_streaming_tokens(user_id, service_name)
+    streaming_client = get_streaming_service(service_name)
     try:
         streaming_client.save_album(user_tokens, album_id)
     except Exception as e:
@@ -189,6 +183,47 @@ def set_allow_fetching(user_id: str) -> Dict[str, Any]:
             new_fetching = True
         db.update_fetching_allowance(user_id, new_fetching)
     return new_fetching
+
+
+@app.post("/streaming_service/connect")
+def connect_streaming_service(
+    user_id: str, 
+    service_name: str, 
+    access_token: str, 
+    refresh_token: str
+) -> Dict[str, Any]:
+    """Connect a user to a streaming service with their tokens."""
+    with DigsterDB(db_url=str(os.environ.get("DATABASE_URL"))) as db:
+        db.upsert_user_streaming_service(user_id, service_name, access_token, refresh_token)
+    return {"status": "success", "message": f"Connected to {service_name}"}
+
+
+@app.get("/streaming_service/supported")
+def get_supported_services() -> Dict[str, Any]:
+    """Get list of supported streaming services."""
+    from digster_api.streaming_service_factory import StreamingServiceFactory
+    return {"services": StreamingServiceFactory.get_supported_services()}
+
+
+@app.get("/user_streaming_services")
+def get_user_streaming_services(user_id: str) -> Dict[str, Any]:
+    """Get user's connected streaming services."""
+    with DigsterDB(db_url=str(os.environ.get("DATABASE_URL"))) as db:
+        # This would require a new method in DigsterDB
+        query = f"""
+        SELECT service_name, created_at, updated_at 
+        FROM user_streaming_services 
+        WHERE user_id = '{user_id}'
+        """
+        try:
+            result = db.run_select_query(query)
+            return {"services": result}
+        except Exception:
+            # Fallback to legacy check for Spotify
+            spotify_tokens = db.get_user_spotify_tokens(user_id)
+            if spotify_tokens:
+                return {"services": [{"service_name": "spotify", "created_at": None, "updated_at": None}]}
+            return {"services": []}
 
 
 @app.get("/user_info")
@@ -488,6 +523,7 @@ def get_albums(
     SELECT 
         albums.name, 
         albums.label,
+        COALESCE(albums.external_id, albums.spotify_id) as external_id,
         albums.spotify_id,
         albums.image_url,
         artists.name as artist_name,
