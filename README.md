@@ -1,5 +1,28 @@
 # FastAPI for Digster API
 
+## Streaming Services
+
+This API supports multiple streaming services through a unified interface:
+
+### Spotify (Default)
+- Set environment variables: `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`
+- Supports all features including currently playing, recently played, and audio features
+
+### Deezer
+- Set environment variables: `DEEZER_CLIENT_ID`, `DEEZER_CLIENT_SECRET`, `STREAMING_SERVICE=deezer`
+- Supports basic functionality (some features limited by Deezer API)
+
+To switch between services, set the `STREAMING_SERVICE` environment variable:
+```sh
+export STREAMING_SERVICE=deezer  # or "spotify" (default)
+```
+
+### Deezer API Limitations
+- No "currently playing" endpoint available
+- No "recently played" endpoint available  
+- No audio features/attributes like Spotify
+- Refresh tokens not supported (re-authentication required)
+
 # Activate virtual env
 ```sh
 poetry shell
