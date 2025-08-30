@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+import os
 
 import requests
 from dotenv import load_dotenv
@@ -13,10 +14,11 @@ class SpotifyController:
     def __init__(self, client_id: str, client_secret: str) -> None:
         self.client_id = client_id
         self.client_secret = client_secret
-        self._base_url = "https://api.spotify.com"
+        self._base_url = os.environ.get("SPOTIFY_API_BASE_URL", "https://api.spotify.com")
+        self._accounts_url = os.environ.get("SPOTIFY_ACCOUNTS_URL", "https://accounts.spotify.com/api/token")
 
     def get_unauth_token(self) -> str:
-        url = "https://accounts.spotify.com/api/token"
+        url = self._accounts_url
         payload = "grant_type=client_credentials"
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         try:
@@ -32,7 +34,7 @@ class SpotifyController:
         return response.json().get("access_token")
 
     def refresh_access_token(self, refresh_token):
-        auth_url = "https://accounts.spotify.com/api/token"
+        auth_url = self._accounts_url
         headers = {
             "Authorization": "Basic "
             + base64.b64encode(

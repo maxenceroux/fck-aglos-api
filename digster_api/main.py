@@ -39,11 +39,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-CLIENT_ID = "b45b68c4c7a0421589605adf1e1a7626"
-CLIENT_SECRET = "9f629374960a45aa8268eab3a9dbe18b"
-REDIRECT_URI = "https://fck-algos.com/callback"
-AUTH_URL = "https://accounts.spotify.com/authorize"
-TOKEN_URL = "https://accounts.spotify.com/api/token"
+CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID", "b45b68c4c7a0421589605adf1e1a7626")
+CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET", "9f629374960a45aa8268eab3a9dbe18b")
+REDIRECT_URI = os.environ.get("SPOTIFY_REDIRECT_URI", "https://fck-algos.com/callback")
+AUTH_URL = os.environ.get("SPOTIFY_AUTH_URL", "https://accounts.spotify.com/authorize")
+TOKEN_URL = os.environ.get("SPOTIFY_ACCOUNTS_URL", "https://accounts.spotify.com/api/token")
 SCOPE = ["user-library-read", "user-library-modify"]
 # In-memory storage for tokens; use a database for persistent storage
 user_tokens = {}
