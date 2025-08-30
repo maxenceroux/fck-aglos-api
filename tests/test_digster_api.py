@@ -23,7 +23,41 @@ def test_spotify_client():
         client_secret="secret_test",
     )
     assert spotify_client.client_id == "test"
-    assert spotify_client._base_url == "https://api.spotify.com"
+    # Should use environment variable or fallback to default
+    expected_base_url = os.environ.get("SPOTIFY_API_BASE_URL", "https://api.spotify.com")
+    assert spotify_client._base_url == expected_base_url
+    expected_accounts_url = os.environ.get("SPOTIFY_ACCOUNTS_URL", "https://accounts.spotify.com/api/token")
+    assert spotify_client._accounts_url == expected_accounts_url
+
+
+def test_spotify_client_with_env_variables():
+    """Test that SpotifyController uses environment variables when available"""
+    # Set test environment variables
+    old_base_url = os.environ.get("SPOTIFY_API_BASE_URL")
+    old_accounts_url = os.environ.get("SPOTIFY_ACCOUNTS_URL")
+    
+    try:
+        os.environ["SPOTIFY_API_BASE_URL"] = "https://test-api.spotify.com"
+        os.environ["SPOTIFY_ACCOUNTS_URL"] = "https://test-accounts.spotify.com/api/token"
+        
+        spotify_client = SpotifyController(
+            client_id="test",
+            client_secret="secret_test",
+        )
+        
+        assert spotify_client._base_url == "https://test-api.spotify.com"
+        assert spotify_client._accounts_url == "https://test-accounts.spotify.com/api/token"
+    finally:
+        # Restore original environment variables
+        if old_base_url is not None:
+            os.environ["SPOTIFY_API_BASE_URL"] = old_base_url
+        elif "SPOTIFY_API_BASE_URL" in os.environ:
+            del os.environ["SPOTIFY_API_BASE_URL"]
+            
+        if old_accounts_url is not None:
+            os.environ["SPOTIFY_ACCOUNTS_URL"] = old_accounts_url
+        elif "SPOTIFY_ACCOUNTS_URL" in os.environ:
+            del os.environ["SPOTIFY_ACCOUNTS_URL"]
 
 
 # TODO
@@ -45,9 +79,10 @@ def test_spotify_get_unauth_token_failure():
     )
     with pytest.raises(SystemExit) as excinfo:
         spotify_client.get_unauth_token()
+    # Should use environment variable or fallback to default
+    expected_accounts_url = os.environ.get("SPOTIFY_ACCOUNTS_URL", "https://accounts.spotify.com/api/token")
     assert (
-        "400 Client Error: Bad Request for url:"
-        " https://accounts.spotify.com/api/token" in str(excinfo)
+        f"400 Client Error: Bad Request for url: {expected_accounts_url}" in str(excinfo)
     )
 
 
