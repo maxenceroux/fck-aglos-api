@@ -2,11 +2,8 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import requests
-from dotenv import load_dotenv
 
 from .streaming_service_interface import StreamingServiceInterface
-
-load_dotenv()
 
 # Configure logger
 logger = logging.getLogger(__name__)
