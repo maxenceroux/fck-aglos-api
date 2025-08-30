@@ -16,6 +16,7 @@ from digster_api.models import (
 )
 
 from digster_api.spotify_controller import SpotifyController
+from digster_api.apple_music_controller import AppleMusicController
 from digster_api.streaming_service_interface import StreamingServiceInterface
 from digster_api.bg_tasks import fetch_albums_data
 from digster_api.mailjet_client import MailJetClient
@@ -25,14 +26,31 @@ from fastapi.middleware.cors import CORSMiddleware
 import requests
 
 
-def get_streaming_service() -> StreamingServiceInterface:
-    """Factory function to get the streaming service instance."""
-    # For now, return SpotifyController, but this can be extended
-    # to support other streaming services based on configuration
-    return SpotifyController(
-        client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
-        client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
-    )
+def get_streaming_service(service_type: str = "spotify") -> StreamingServiceInterface:
+    """Factory function to get the streaming service instance.
+    
+    Args:
+        service_type: The type of streaming service ('spotify', 'apple_music', 'deezer')
+    
+    Returns:
+        StreamingServiceInterface implementation
+    """
+    if service_type.lower() == "spotify":
+        return SpotifyController(
+            client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
+            client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
+        )
+    elif service_type.lower() == "apple_music":
+        return AppleMusicController(
+            client_id=str(os.environ.get("APPLE_MUSIC_TEAM_ID")),
+            client_secret=str(os.environ.get("APPLE_MUSIC_KEY_ID")),
+        )
+    else:
+        # Default to Spotify for backward compatibility
+        return SpotifyController(
+            client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
+            client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
+        )
 
 
 origins = [

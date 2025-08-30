@@ -8,6 +8,7 @@ import pytest
 from digster_api.streaming_service_interface import StreamingServiceInterface
 from digster_api.spotify_controller import SpotifyController
 from digster_api.deezer_controller import DeezerController
+from digster_api.apple_music_controller import AppleMusicController
 
 
 def test_deezer_controller_implements_interface():
@@ -89,3 +90,26 @@ def test_bg_tasks_factory_function():
         service = bg_get_streaming_service()
         assert isinstance(service, StreamingServiceInterface)
         assert isinstance(service, SpotifyController)
+
+
+def test_apple_music_controller_implements_interface():
+    """Test that AppleMusicController correctly implements StreamingServiceInterface."""
+    # Test instantiation
+    controller = AppleMusicController(client_id="test_team_id", client_secret="test_key_id")
+    
+    # Verify it's an instance of the interface
+    assert isinstance(controller, StreamingServiceInterface)
+    
+    # Verify it has all required attributes
+    assert hasattr(controller, 'get_unauth_token')
+    assert hasattr(controller, 'refresh_access_token')
+    assert hasattr(controller, 'get_current_play')
+    assert hasattr(controller, 'save_album')
+    assert hasattr(controller, 'get_user_info')
+    assert hasattr(controller, 'get_recently_played')
+    assert hasattr(controller, 'get_tracks_info')
+    assert hasattr(controller, 'get_tracks_attributes')
+    assert hasattr(controller, 'get_albums_info')
+    assert hasattr(controller, 'get_artists_info')
+    assert hasattr(controller, 'get_user_saved_albums_limit')
+    assert hasattr(controller, 'get_user_saved_albums')
