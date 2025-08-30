@@ -6,10 +6,12 @@ from dotenv import load_dotenv
 from requests.auth import HTTPBasicAuth
 import base64
 
+from .streaming_service_interface import StreamingServiceInterface
+
 load_dotenv()
 
 
-class SpotifyController:
+class SpotifyController(StreamingServiceInterface):
     def __init__(self, client_id: str, client_secret: str) -> None:
         self.client_id = client_id
         self.client_secret = client_secret
