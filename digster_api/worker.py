@@ -12,6 +12,7 @@ from digster_api.dominant_color_finder import ColorFinder
 from digster_api.models import Album, Artist, Genre, Style, UserAlbum
 from digster_api.discogs_controller import DiscogsController
 from digster_api.spotify_controller import SpotifyController
+from digster_api.bg_tasks import fetch_albums_data
 
 celery_color = Celery(__name__)
 celery_genre = Celery(__name__)

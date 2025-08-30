@@ -9,7 +9,6 @@ services:
     env_file:
       - ./digster_api/prod.env
     depends_on:
-      - chrome
       - initdb
     volumes:
       - ./digster_api/alembic/versions:/app/digster_api/alembic/versions
@@ -44,7 +43,6 @@ services:
     env_file:
       - ./digster_api/prod.env
     depends_on:
-      - chrome
       - initdb
       - web
       - redis
@@ -54,7 +52,6 @@ services:
     env_file:
       - ./digster_api/prod.env
     depends_on:
-      - chrome
       - initdb
       - web
       - redis

@@ -16,12 +16,24 @@ from digster_api.models import (
 )
 
 from digster_api.spotify_controller import SpotifyController
+from digster_api.streaming_service_interface import StreamingServiceInterface
 from digster_api.bg_tasks import fetch_albums_data
 from digster_api.mailjet_client import MailJetClient
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 import requests
+
+
+def get_streaming_service() -> StreamingServiceInterface:
+    """Factory function to get the streaming service instance."""
+    # For now, return SpotifyController, but this can be extended
+    # to support other streaming services based on configuration
+    return SpotifyController(
+        client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
+        client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
+    )
+
 
 origins = [
     "http://localhost:3000",
@@ -91,10 +103,7 @@ async def callback(request: Request):
     token_info = r.json()
     access_token = token_info.get("access_token")
     refresh_token = token_info.get("refresh_token")
-    sp_client = SpotifyController(
-        client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
-        client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
-    )
+    sp_client = get_streaming_service()
     user = sp_client.get_user_info(access_token)
     with DigsterDB(db_url=str(os.environ.get("DATABASE_URL"))) as db:
         db.insert_user(user, access_token, refresh_token)
@@ -116,11 +125,8 @@ def root() -> Dict[str, str]:
 
 @app.get("/spotify_user_info")
 def get_spotify_user_info(token: str) -> Dict[str, Any]:
-    spotify_client = SpotifyController(
-        client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
-        client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
-    )
-    user = spotify_client.get_user_info(token)
+    streaming_client = get_streaming_service()
+    user = streaming_client.get_user_info(token)
     db = DigsterDB(db_url=str(os.environ.get("DATABASE_URL")))
     db.upsert_user(user)
     db.close_conn()
@@ -163,12 +169,9 @@ def save_album(user_id: str, album_id: str):
     with DigsterDB(db_url=str(os.environ.get("DATABASE_URL"))) as db:
         user_id = str(user_id)
         user_tokens = db.get_user_spotify_tokens(user_id)
-    spotify_client = SpotifyController(
-        client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
-        client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
-    )
+    streaming_client = get_streaming_service()
     try:
-        spotify_client.save_album(user_tokens, album_id)
+        streaming_client.save_album(user_tokens, album_id)
     except Exception as e:
         raise e
 
