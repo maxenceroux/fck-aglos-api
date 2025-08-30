@@ -16,6 +16,7 @@ from digster_api.models import (
 )
 
 from digster_api.spotify_controller import SpotifyController
+from digster_api.deezer_controller import DeezerController
 from digster_api.streaming_service_interface import StreamingServiceInterface
 from digster_api.bg_tasks import fetch_albums_data
 from digster_api.mailjet_client import MailJetClient
@@ -27,12 +28,20 @@ import requests
 
 def get_streaming_service() -> StreamingServiceInterface:
     """Factory function to get the streaming service instance."""
-    # For now, return SpotifyController, but this can be extended
-    # to support other streaming services based on configuration
-    return SpotifyController(
-        client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
-        client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
-    )
+    # Check which streaming service to use based on environment variable
+    streaming_service = os.environ.get("STREAMING_SERVICE", "spotify").lower()
+    
+    if streaming_service == "deezer":
+        return DeezerController(
+            client_id=str(os.environ.get("DEEZER_CLIENT_ID")),
+            client_secret=str(os.environ.get("DEEZER_CLIENT_SECRET")),
+        )
+    else:
+        # Default to Spotify for backward compatibility
+        return SpotifyController(
+            client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
+            client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
+        )
 
 
 origins = [

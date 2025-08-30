@@ -1,5 +1,6 @@
 import logging
 from digster_api.spotify_controller import SpotifyController
+from digster_api.deezer_controller import DeezerController
 from digster_api.streaming_service_interface import StreamingServiceInterface
 from digster_api.digster_db import DigsterDB
 from digster_api.worker import (
@@ -14,10 +15,20 @@ load_dotenv()
 
 def get_streaming_service() -> StreamingServiceInterface:
     """Factory function to get the streaming service instance."""
-    return SpotifyController(
-        client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
-        client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
-    )
+    # Check which streaming service to use based on environment variable
+    streaming_service = os.environ.get("STREAMING_SERVICE", "spotify").lower()
+    
+    if streaming_service == "deezer":
+        return DeezerController(
+            client_id=str(os.environ.get("DEEZER_CLIENT_ID")),
+            client_secret=str(os.environ.get("DEEZER_CLIENT_SECRET")),
+        )
+    else:
+        # Default to Spotify for backward compatibility
+        return SpotifyController(
+            client_id=str(os.environ.get("SPOTIFY_CLIENT_ID")),
+            client_secret=str(os.environ.get("SPOTIFY_CLIENT_SECRET")),
+        )
 
 
 def fetch_albums_data(user_id: str):
